@@ -1,21 +1,12 @@
-############################################################################ 
-## Authors
-# AXIEL PAEZ CEBALLOS
-# MARIA SOL DOMINGUEZ CARNUCCIO
-# RODRIGO ARIAS CAPEL
 
+setwd("~/ShinyPAM")
 
-############################################################################ 
-## Set directory
-setwd("~/Desktop/BIGDATA/PracticaShiny")
-
-# runApp("App1") #el script está guardado en /Tutorial/App-1/App.r
-# runApp("App-1", display.mode = "showcase") para ver el código en la ventana de la app
+# runApp("ShinyPAM") 
 
 ############################################################################ 
 ## Install or load package
 
-pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny")
+pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny","cluster","Rtsne","factoextra","cluster")
 
 ## If not installed, install and load all packages
 package.check <- lapply(
@@ -28,17 +19,7 @@ package.check <- lapply(
   }
 )
 
-############################################################################ 
-## Read the data and load helpers
-
-#First data set with a smaller set of columns
-#data <- read.csv("telco.csv", header=TRUE, stringsAsFactors = TRUE)
-#glimpse(data)
-
-data <- read_excel("telcoChurn/data/Telco_customer_churn.xlsx")
-
-## Add helpers
-source("telcoChurn/helpers.r")
+data <- read_excel("data/Telco_customer_churn.xlsx")
 
 ############################################################################ 
 # check out and prepare the data
@@ -46,7 +27,7 @@ source("telcoChurn/helpers.r")
 # Drop space in colnames
 colnames(data) <- gsub(" ","",colnames(data))
 
-glimpse(data)
+#glimpse(data)
 
 #Transform all character variables into factors
 data[sapply(data, is.character)] <- lapply(data[sapply(data,is.character)], as.factor)
@@ -54,7 +35,7 @@ data[sapply(data, is.character)] <- lapply(data[sapply(data,is.character)], as.f
 #Undo for LatLong 
 data$LatLong <- as.character(data$LatLong)
 
-#Churn Value and zipcode are doubles but really is a factor
+#Churn Value and zipcode are doubles but really are a factor
 data$ChurnValue <- as.factor(data$ChurnValue) #same as churn label
 data$ZipCode <- as.factor(data$ZipCode)
 
@@ -63,25 +44,7 @@ dropable <- c("Count","CustomerID","Country","State") # See later which can be d
 data <- (data[, !(names(data) %in% dropable)])
 
 #20 possible chrurn reasons
-levels(data$ChurnReason)
-
-# data %>% 
-#   ggplot(aes(x = ChurnScore, y=CLTV, color = ChurnLabel)) +
-#   geom_point() 
-# 
-# #Independientemente del churnScore y CLTV, el tipo de contrato Month-to-Month tiene muchísimo churn
-# data %>% filter(ChurnValue == 1) %>% 
-#   ggplot(aes(x = ChurnScore, y=CLTV, color = Contract)) +
-#   geom_point() 
-# 
-# data %>% filter(ChurnValue == 1) %>% 
-#   ggplot(aes(x = TenureMonths, y=TotalCharges, color = Contract)) +
-#   geom_point() 
-# 
-# data %>% filter(ChurnValue == 1) %>% 
-#   ggplot(aes(x = TenureMonths, y=TotalCharges, color = Contract)) +
-#   geom_point() 
-
+#levels(data$ChurnReason)
 
 # Filter variables names for scatterplots inputs
 scatterPlotNumeric <- names(data %>% select(TenureMonths,MonthlyCharges,TotalCharges,ChurnScore,CLTV))
@@ -90,50 +53,122 @@ scatterPlotFactor <- names(data %>% select_if(is.factor) %>%
                              select(-contains("City")) %>% 
                              select(-contains("ZipCode")) 
                            )
-                           
+
+### PAM
+# Prep data: drop variables that have repeated data 
+dataPAM <- data %>% filter(ChurnValue == 1)
+dropablePAM <- c("LatLong","Latitude","Longitude","ZipCode","ChurnValue","ChurnLabel","ChurnReason") # See later which can be dropped
+dataPAM <- (dataPAM[, !(names(data) %in% dropablePAM)])
+
+#calculate number of clusters recommended
+gower_dist <- daisy(dataPAM, metric = c("gower")) 
+gower_mat <- as.matrix(gower_dist)
+sil_width <- c(NA)
+for(i in 2:8){
+  pamFit <- pam(gower_dist, diss = TRUE, k = i)
+  sil_width[i] <- pamFit$silinfo$avg.width
+}
+k <- which.max(sil_width) #Recommended number of clusters
+
 # Define UI ---
 ui <- fluidPage(
   
-  titlePanel('Telco Churn Analysis'),
-  
+  titlePanel('TELCO CHURN ANALYSIS'),
   br(),
-  h3("1- Are there any groups of customers that are churning?"),
+  h3("1- Are there any groups of customers that are churning?", style = "color:blue"),
+  
   sidebarPanel(
     
+    #SCATTERPLOT
+    h4("1.1- Scatterplot", style = "color:blue"),
     # Scatterplot Inputs
     selectInput(inputId = 'scatterPlot_x', label = 'X Variable', choices = scatterPlotNumeric), #, selected = "TenureMonths"
-    selectInput(inputId = 'scatterPlot_y', label = 'Y Variable', choices = scatterPlotNumeric), #, selected = "TotalCharges"
-    selectInput(inputId = 'color_encoding', 'Select a categorical variable for color encoding',
-                choices = scatterPlotFactor, selected = "Contract")
+    selectInput(inputId = 'scatterPlot_y', label = 'Y Variable', choices = scatterPlotNumeric),
+    selectInput(inputId = 'scatterPlot_color_encoding', 'Select a categorical variable for color encoding',
+                choices = scatterPlotFactor, selected = "Contract"),
+    br(),
+    
+    #PAM
+    h4("1.2- K-Medoids Clustering", style = "color:blue"),
+    br(),
+    
+    # checkboxGroupInput(inputId="PAMcheckGroup",
+    #                    label = "Select which variables do you want to include in the clustering algorithm",
+    #                    #choices = names(dataPAM)),
+    #                    choices = list("City" = 1, "Gender" = 2, "Senior Citizen" = 3, "Partner"= 4,
+    #                                   "Dependents" = 5, "Tenure Months" = 6, "PhoneService" = 7, 
+    #                                   "Contract"= 16, "PaperlessBilling" = 17),
+    #                    ),
+
+    numericInput('numClusters','Select the number of clusters', k, min =2, max=8, step=1),
+    textOutput(outputId = 'kRecommended'),
   ),
   
   mainPanel(
-    plotOutput(outputId = 'scatterPlot')
+    plotOutput(outputId = 'scatterPlot'),
+    plotOutput(outputId = 'pamPlot'),
+    tableOutput(outputId= 'pamTable')
   )
 )
 
 # Define server logic ---
 server <- function(input, output) {
   
-  #Register the x-variable selected so it doesn't appear on y-variable list
-  remaining <- reactive({
-    scatterPlotNumeric[c(-match(input$scatterPlot_x,scatterPlotNumeric))]
-  })
-  
-  observeEvent(remaining(),{
-    choices <- remaining()
-    updateSelectInput(session = getDefaultReactiveDomain(),inputId = "scatterPlot_y",choices = choices)
-  })
-  
-  # scatterPlotData <- reactive({
-  #   data %>% filter(ChurnValue == 1)
-  # })
-
-  output$scatterPlot <- renderPlot({
-    ggplot(data,aes_string(x=input$scatterPlot_x,y=input$scatterPlot_y,color=input$color_encoding)) +
-             geom_point() + #data=scatterPlotData()
-      facet_wrap(~ ChurnLabel)
-  })
+      #####
+      # Scatterplot: Register the x-variable selected so it doesn't appear on y-variable list
+      #####
+      remaining <- reactive({
+        scatterPlotNumeric[c(-match(input$scatterPlot_x,scatterPlotNumeric))]
+      })
+      
+      observeEvent(remaining(),{
+        choices <- remaining()
+        updateSelectInput(session = getDefaultReactiveDomain(),inputId = "scatterPlot_y",choices = choices, selected = "TotalCharges")
+      })
+      
+      # scatterPlotData <- reactive({
+      #   data %>% filter(ChurnValue == 1)
+      # })
+      
+      # Scatterplot: Render plot
+      output$scatterPlot <- renderPlot({
+        ggplot(data,aes_string(x=input$scatterPlot_x,y=input$scatterPlot_y,color=input$scatterPlot_color_encoding)) +
+          geom_point() + #data=scatterPlotData()
+          facet_wrap(~ ChurnLabel) + 
+          ggtitle("Scatterplot faceting Churn")
+      }) 
+      
+      #####
+      # PAM
+      #####
+      
+      #Calculate and print the recommended number of clusters
+      output$kRecommended <- renderText({
+        paste("The number of clusters recommended is ",k)
+      })
+      
+       pamFit <- reactive({
+         pam(gower_dist, diss = TRUE, input$numClusters)
+        })
+      
+      #Calculate clusters and render plot
+      output$pamPlot <- renderPlot({
+        # reduzco dimensionalidad para graficar en dos dimensiones, uso t-sne
+        tsne_obj <- Rtsne(gower_dist, is_distance = TRUE)
+        tsne_data <- tsne_obj$Y %>%
+          data.frame() %>%
+          setNames(c("X", "Y")) %>%
+          mutate(cluster = factor(pamFit()$clustering))
+    
+        ggplot(aes(x = X, y = Y), data = tsne_data) +
+          geom_point(aes(color = cluster)) +
+          labs(title = "Resultados clustering PAM")
+      })
+      
+      output$pamTable <- renderTable({
+        dataPAM[pamFit()$medoids,]      
+      })  
+      
 }
 
 # Run the App ---
