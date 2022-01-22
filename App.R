@@ -1,12 +1,18 @@
+############################################################################ 
+## Authors
+# ARIAS CAPE, RODRIGO
+# DOMINGUEZ CARNUCCIO, MARIA SOL
+# PAEZ CEBALLOS, AXIEL 
+############################################################################ 
 
-setwd("~/ShinyPAM")
+setwd("~/shinyAppBigData")
 
 # runApp("ShinyPAM") 
 
 ############################################################################ 
 ## Install or load package
 
-pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny","cluster","Rtsne","factoextra","cluster")
+pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny","cluster","Rtsne","rsconnect")
 
 ## If not installed, install and load all packages
 package.check <- lapply(
@@ -72,44 +78,70 @@ k <- which.max(sil_width) #Recommended number of clusters
 
 # Define UI ---
 ui <- fluidPage(
-  
-  titlePanel('TELCO CHURN ANALYSIS'),
+  titlePanel(h1("TELCO CHURN ANALYSIS", align="center")),
   br(),
-  h3("1- Are there any groups of customers that are churning?", style = "color:blue"),
-  
-  sidebarPanel(
-    
-    #SCATTERPLOT
-    h4("1.1- Scatterplot", style = "color:blue"),
-    # Scatterplot Inputs
-    selectInput(inputId = 'scatterPlot_x', label = 'X Variable', choices = scatterPlotNumeric), #, selected = "TenureMonths"
-    selectInput(inputId = 'scatterPlot_y', label = 'Y Variable', choices = scatterPlotNumeric),
-    selectInput(inputId = 'scatterPlot_color_encoding', 'Select a categorical variable for color encoding',
-                choices = scatterPlotFactor, selected = "Contract"),
-    br(),
-    
-    #PAM
-    h4("1.2- K-Medoids Clustering", style = "color:blue"),
-    br(),
-    
-    # checkboxGroupInput(inputId="PAMcheckGroup",
-    #                    label = "Select which variables do you want to include in the clustering algorithm",
-    #                    #choices = names(dataPAM)),
-    #                    choices = list("City" = 1, "Gender" = 2, "Senior Citizen" = 3, "Partner"= 4,
-    #                                   "Dependents" = 5, "Tenure Months" = 6, "PhoneService" = 7, 
-    #                                   "Contract"= 16, "PaperlessBilling" = 17),
-    #                    ),
+  tabsetPanel(
+    tabPanel("Question 1",
+        h3("1- Are there any groups of customers that are churning?", style = "color:blue"), 
+        sidebarPanel(
+          br(),
+          #SCATTERPLOT
+          h4("1.1- Scatterplot", style = "color:blue"),
+          # Scatterplot Inputs
+          selectInput(inputId = 'scatterPlot_x', label = 'X Variable', choices = scatterPlotNumeric), 
+          selectInput(inputId = 'scatterPlot_y', label = 'Y Variable', choices = scatterPlotNumeric),
+          selectInput(inputId = 'scatterPlot_color_encoding', 'Select a categorical variable for color encoding',
+                      choices = scatterPlotFactor, selected = "Contract"),
+          br(),
+          
+          #PAM
+          h4("1.2- K-Medoids Clustering", style = "color:blue"),
+          br(),
+          
+          # checkboxGroupInput(inputId="PAMcheckGroup",
+          #                    label = "Select which variables do you want to include in the clustering algorithm",
+          #                    #choices = names(dataPAM)),
+          #                    choices = list("City" = 1, "Gender" = 2, "Senior Citizen" = 3, "Partner"= 4,
+          #                                   "Dependents" = 5, "Tenure Months" = 6, "PhoneService" = 7, 
+          #                                   "Contract"= 16, "PaperlessBilling" = 17),
+          #                    ),
+      
+          numericInput('numClusters','Select the number of clusters', k, min =2, max=8, step=1),
+          textOutput(outputId = 'kRecommended'),
+          ), #sidebarPanel
+        
+          mainPanel(
+            plotOutput(outputId = 'scatterPlot'),
+            plotOutput(outputId = 'pamPlot'),
+            tableOutput(outputId= 'pamTable')
+          )#main panel
 
-    numericInput('numClusters','Select the number of clusters', k, min =2, max=8, step=1),
-    textOutput(outputId = 'kRecommended'),
-  ),
-  
-  mainPanel(
-    plotOutput(outputId = 'scatterPlot'),
-    plotOutput(outputId = 'pamPlot'),
-    tableOutput(outputId= 'pamTable')
-  )
-)
+    ), #tabpanel Question 1
+    
+    tabPanel("Question 2",
+    #          sidebarLayout(
+    #            sidebarPanel(
+    #              p("Acá va un select input"),
+    #            mainPanel(
+    #              htmlOutput("Question 2")
+    #            )             
+    #           )
+    #          )
+    ), #tabPanel Question 2
+    
+    tabPanel("Question 3",
+             #sidebarLayout(
+             # sidebarPanel(
+             #  p("Acá va un select input"),
+             #   mainPanel(
+             #    htmlOutput("Question 2")
+             #  )             
+             # )
+             #)
+    )#tabPanel Question 3
+    
+  ) #tabsetPanel
+) #fluidPage
 
 # Define server logic ---
 server <- function(input, output) {
