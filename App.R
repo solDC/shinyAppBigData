@@ -78,6 +78,9 @@ for(i in 2:8){
 }
 k <- which.max(sil_width) #Recommended number of clusters
 
+dataNotNA <- data %>% filter(!is.na(ChurnReason))
+churnReasonCombo <- unique(dataNotNA$ChurnReason)
+
 # Define UI ---
 ui <- fluidPage(
   titlePanel(h1("TELCO CHURN ANALYSIS", align="center")),
@@ -132,7 +135,10 @@ ui <- fluidPage(
     ), #tabPanel Question 2
     
     tabPanel("Question 3",
-             h3("3- Where are the customers churning?", style = "color:blue"), 
+             h3("3- Where are the customers churning?", style = "color:blue"),
+             selectInput(inputId = 'selectedChurnReasonCombo', 'Select a categorical variable for color encoding',
+                         choices = churnReasonCombo),
+             checkboxInput("filterReaseonCombo", "Activate filter", FALSE),
              plotOutput("map")
     )#tabPanel Question 3
     
@@ -201,7 +207,15 @@ server <- function(input, output) {
         # Preprocessing
         california_fortified <- tidy(california, region = "NAME")
         
-        ciudades <- aggregate(Count ~ City, data, sum)
+        #filter
+        if(input$filterReaseonCombo){
+          dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
+        }
+        else{
+          dataFiltered <- data
+        }
+        
+        ciudades <- aggregate(Count ~ City, dataFiltered, sum)
         
         california_fortified = california_fortified %>%
           left_join(. , ciudades, by=c("id"="City"))
