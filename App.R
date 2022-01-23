@@ -4,12 +4,6 @@
 # DOMINGUEZ CARNUCCIO, MARIA SOL
 # PAEZ CEBALLOS, AXIEL 
 ############################################################################ 
-
-setwd("~/shinyAppBigData")
-
-# runApp("ShinyPAM") 
-
-############################################################################ 
 ## Install or load package
 
 pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny","cluster","Rtsne","rsconnect")
@@ -24,6 +18,10 @@ package.check <- lapply(
     }
   }
 )
+
+############################################################################ 
+## Set directory. This part is personal for each enviroment. The wd must be the root github directory
+setwd("~/shinyAppBigData")
 
 data <- read_excel("data/Telco_customer_churn.xlsx")
 
