@@ -101,6 +101,20 @@ barPlotFactor2 <- names(churns %>%select_if(is.factor) %>%
                               select(-contains("ZipCode")))
 dataNotNA <- data %>% filter(!is.na(ChurnReason))
 churnReasonCombo <- unique(dataNotNA$ChurnReason)
+# Tenemos que obtener por cada zip code su county
+countyCalifornia <- california@data[["NAME"]]
+data$County <- ""
+for (county in countyCalifornia){
+  zipCodes <- search_county(county,'CA')
+  
+  for (zipCode in zipCodes$zipcode){
+    indexes <- which(data$ZipCode == zipCode)
+    if(!is.null(indexes) && length(indexes)>0){
+      data[which(data$ZipCode == zipCode),grep("County", colnames(data))] <- county
+    }
+  }
+}
+
 
 # Define UI ---
 ui <- fluidPage(
@@ -155,7 +169,7 @@ ui <- fluidPage(
              selectInput(inputId = 'selectedChurnReasonCombo', 'Select a categorical variable for color encoding',
                          choices = churnReasonCombo),
              checkboxInput("filterReaseonCombo", "Activate filter", FALSE),
-             plotOutput("map")
+             plotOutput("map",width = "100%",height = "600px")
     )#tabPanel Question 3
     
   ) #tabsetPanel
@@ -235,32 +249,26 @@ server <- function(input, output) {
   #####
   # Question 3
   #####
-  output$map <- renderPlot({
-    # Preprocessing
-    california_fortified <- tidy(california, region = "NAME")
-  })
-
-  
-  output$map <- renderPlot({
-    # Preprocessing
-    california_fortified <- tidy(california, region = "NAME")
-    
-    #filter
-    if(input$filterReaseonCombo){
-      dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
-    }
-    else{
-      dataFiltered <- data
-    }
-    
-    ciudades <- aggregate(Count ~ City, dataFiltered, sum)
-    
-    california_fortified = california_fortified %>%
-      left_join(. , ciudades, by=c("id"="City"))
-    # Note that if the number of restaurant is NA, it is in fact 0
-    california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
-    ggplotMap(california_fortified)
-  })
+      output$map <- renderPlot({
+        # Preprocessing
+        california_fortified <- tidy(california, region = "NAME")
+        
+        #filter
+        if(input$filterReaseonCombo){
+          dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
+        }
+        else{
+          dataFiltered <- data
+        }
+        ciudades <- aggregate(Count ~ County, dataFiltered, sum)
+        
+        california_fortified = california_fortified %>%
+          left_join(. , ciudades, by=c("id"="County"))
+        # Note that if the number of restaurant is NA, it is in fact 0
+        california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
+        ggplotMap(california_fortified)
+      })
+      
 }
 
 # Run the App ---
