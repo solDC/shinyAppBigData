@@ -6,7 +6,7 @@
 ############################################################################ 
 ## Install or load package
 
-pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny","cluster","Rtsne","rsconnect")
+pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny","cluster","Rtsne","rsconnect","geojsonio","broom","geojsonR","viridis")
 
 ## If not installed, install and load all packages
 package.check <- lapply(
@@ -21,9 +21,13 @@ package.check <- lapply(
 
 ############################################################################ 
 ## Set directory. This part is personal for each enviroment. The wd must be the root github directory
-setwd("~/shinyAppBigData")
+#setwd("~/shinyAppBigData")
 
 data <- read_excel("data/Telco_customer_churn.xlsx")
+url = "data/county_ca.geojson"
+california <- geojson_read(url,  what = "sp")
+
+source("ggplotMap.r", encoding="utf-8")
 
 ############################################################################ 
 # check out and prepare the data
@@ -44,7 +48,7 @@ data$ChurnValue <- as.factor(data$ChurnValue) #same as churn label
 data$ZipCode <- as.factor(data$ZipCode)
 
 # Drop variables that we don't need
-dropable <- c("Count","CustomerID","Country","State") # See later which can be dropped
+dropable <- c("CustomerID","Country","State") # See later which can be dropped
 data <- (data[, !(names(data) %in% dropable)])
 
 #20 possible chrurn reasons
@@ -128,14 +132,8 @@ ui <- fluidPage(
     ), #tabPanel Question 2
     
     tabPanel("Question 3",
-             #sidebarLayout(
-             # sidebarPanel(
-             #  p("Acá va un select input"),
-             #   mainPanel(
-             #    htmlOutput("Question 2")
-             #  )             
-             # )
-             #)
+             h3("3- Where are the customers churning?", style = "color:blue"), 
+             plotOutput("map")
     )#tabPanel Question 3
     
   ) #tabsetPanel
@@ -198,6 +196,19 @@ server <- function(input, output) {
       output$pamTable <- renderTable({
         dataPAM[pamFit()$medoids,]      
       })  
+      
+      output$map <- renderPlot({
+        # Preprocessing
+        california_fortified <- tidy(california, region = "NAME")
+        
+        ciudades <- aggregate(Count ~ City, data, sum)
+        
+        california_fortified = california_fortified %>%
+          left_join(. , ciudades, by=c("id"="City"))
+        # Note that if the number of restaurant is NA, it is in fact 0
+        california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
+        ggplotMap(california_fortified)
+      })
       
 }
 
