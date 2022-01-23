@@ -1,0 +1,13 @@
+name: shinyAppBigData
+title: shinyAppBigData
+username:
+account: soldc
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5490196
+bundleId: 5499436
+url: https://soldc.shinyapps.io/shinyAppBigData/
+when: 1642966173.96339
+lastSyncTime: 1642966173.9634
+asMultiple: FALSE
+asStatic: FALSE

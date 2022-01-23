@@ -6,7 +6,8 @@
 ############################################################################ 
 ## Install or load package
 
-pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny","cluster","Rtsne","rsconnect","geojsonio","broom","geojsonR","viridis")
+pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny",
+        "cluster","Rtsne","rsconnect","geojsonio","broom","geojsonR","viridis")
 
 ## If not installed, install and load all packages
 package.check <- lapply(
@@ -27,7 +28,7 @@ data <- read_excel("data/Telco_customer_churn.xlsx")
 url = "data/county_ca.geojson"
 california <- geojson_read(url,  what = "sp")
 
-source("ggplotMap.r", encoding="utf-8")
+source("ggplotMap.R", encoding="utf-8")
 
 ############################################################################ 
 # check out and prepare the data
@@ -36,6 +37,9 @@ source("ggplotMap.r", encoding="utf-8")
 colnames(data) <- gsub(" ","",colnames(data))
 
 #glimpse(data)
+summary(data)
+#Drop missing values
+data <- data %>% filter(!is.na(TotalCharges))
 
 #Transform all character variables into factors
 data[sapply(data, is.character)] <- lapply(data[sapply(data,is.character)], as.factor)
@@ -90,12 +94,11 @@ churns <- churns[!is.na(churns$Contract),]
 churns[sapply(churns, is.character)] <- lapply(churns[sapply(churns,is.character)], as.factor)
 churns$ChurnID <- as.character(churns$ChurnID)
 
-scatterPlotFactor2 <- names(churns %>%select_if(is.factor) %>% 
+barPlotFactor2 <- names(churns %>%select_if(is.factor) %>% 
+                              select(-contains("LatLong")) %>% 
                               select(-contains("Churn")) %>% 
                               select(-contains("City")) %>% 
                               select(-contains("ZipCode")))
-
-
 dataNotNA <- data %>% filter(!is.na(ChurnReason))
 churnReasonCombo <- unique(dataNotNA$ChurnReason)
 
@@ -108,19 +111,19 @@ ui <- fluidPage(
              h3("1- Are there any groups of customers that are churning?", style = "color:blue"), 
              sidebarPanel(
                br(),
+               
                #SCATTERPLOT
                h4("1.1- Scatterplot", style = "color:blue"),
                # Scatterplot Inputs
                selectInput(inputId = 'scatterPlot_x', label = 'X Variable', choices = scatterPlotNumeric), 
                selectInput(inputId = 'scatterPlot_y', label = 'Y Variable', choices = scatterPlotNumeric),
                selectInput(inputId = 'scatterPlot_color_encoding', 'Select a categorical variable for color encoding',
-                           choices = scatterPlotFactor, selected = "Contract"),
-               br(),
+                           choices = scatterPlotFactor, selected = "Contract"),              
+               br(), 
                
                #PAM
                h4("1.2- K-Medoids Clustering", style = "color:blue"),
                br(),
-               
                numericInput('numClusters','Select the number of clusters', k, min =2, max=8, step=1),
                textOutput(outputId = 'kRecommended'),
              ), #sidebarPanel
@@ -136,13 +139,13 @@ ui <- fluidPage(
     tabPanel("Question 2",
              h3("2- Why are there customers who are moving? Do those who churn for the same reason have any characteristics in common??", style = "color:blue"), 
              sidebarPanel(
-               selectInput(inputId = 'scatterPlot_color_encoding2', 'Select a categorical variable for color encoding',
-                           choices = scatterPlotFactor2, selected = "Contract"),
+               selectInput(inputId = 'barPlot_color_encoding', 'Select a categorical variable for color encoding',
+                           choices = barPlotFactor2, selected = "Contract"),
                br(),
-               tableOutput("table"),
+               #tableOutput("table"),
                ),
              mainPanel(
-               plotOutput(outputId = 'scatterPlot2')
+               plotOutput(outputId = 'barPlot2')
              )             
 
     ), #tabPanel Question 3
@@ -162,8 +165,10 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   #####
+  # Question 1
+  #####  
+  
   # Scatterplot: Register the x-variable selected so it doesn't appear on y-variable list
-  #####
   remaining <- reactive({
     scatterPlotNumeric[c(-match(input$scatterPlot_x,scatterPlotNumeric))]
   })
@@ -181,13 +186,11 @@ server <- function(input, output) {
   output$scatterPlot <- renderPlot({
     ggplot(data,aes_string(x=input$scatterPlot_x,y=input$scatterPlot_y,color=input$scatterPlot_color_encoding)) +
       geom_point() + #data=scatterPlotData()
-      facet_wrap(~ ChurnLabel) + 
-      ggtitle("Scatterplot faceting Churn")
-  }) 
+      facet_wrap(~ ChurnLabel) +
+      ggtitle("Scatterplot faceting Churn variable")
+  })
   
-  #####
   # PAM
-  #####
   
   #Calculate and print the recommended number of clusters
   output$kRecommended <- renderText({
@@ -214,53 +217,50 @@ server <- function(input, output) {
   
   output$pamTable <- renderTable({
     dataPAM[pamFit()$medoids,]      
-  })  
+  }) 
   
-  output$scatterPlot2 <- renderPlot({
-    ggplot(churns, aes_string(x = "ChurnID", fill = input$scatterPlot_color_encoding2)) + 
-      geom_bar()
-    
+  
+  #####
+  # Question 2
+  #####
+
+  output$barPlot2 <- renderPlot({
+    ggplot(churns, aes_string(x = "ChurnReason", fill = input$barPlot_color_encoding)) + 
+      geom_bar() +
+      coord_flip()
   })
   
-  
-  
-  
-  output$table <- renderTable(aux)
+  #output$table <- renderTable(aux)
+ 
+  #####
+  # Question 3
+  #####
+  output$map <- renderPlot({
+    # Preprocessing
+    california_fortified <- tidy(california, region = "NAME")
+  })
+
   
   output$map <- renderPlot({
     # Preprocessing
     california_fortified <- tidy(california, region = "NAME")
     
-
-        ggplot(aes(x = X, y = Y), data = tsne_data) +
-          geom_point(aes(color = cluster)) +
-          labs(title = "Resultados clustering PAM")
-      })
-      
-      output$pamTable <- renderTable({
-        dataPAM[pamFit()$medoids,]      
-      })  
-      
-      output$map <- renderPlot({
-        # Preprocessing
-        california_fortified <- tidy(california, region = "NAME")
-        
-        #filter
-        if(input$filterReaseonCombo){
-          dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
-        }
-        else{
-          dataFiltered <- data
-        }
-        
-        ciudades <- aggregate(Count ~ City, dataFiltered, sum)
-        
-        california_fortified = california_fortified %>%
-          left_join(. , ciudades, by=c("id"="City"))
-        # Note that if the number of restaurant is NA, it is in fact 0
-        california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
-        ggplotMap(california_fortified)
-      })
+    #filter
+    if(input$filterReaseonCombo){
+      dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
+    }
+    else{
+      dataFiltered <- data
+    }
+    
+    ciudades <- aggregate(Count ~ City, dataFiltered, sum)
+    
+    california_fortified = california_fortified %>%
+      left_join(. , ciudades, by=c("id"="City"))
+    # Note that if the number of restaurant is NA, it is in fact 0
+    california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
+    ggplotMap(california_fortified)
+  })
 }
 
 # Run the App ---
