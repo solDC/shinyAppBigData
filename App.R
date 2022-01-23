@@ -78,6 +78,7 @@ for(i in 2:8){
 }
 k <- which.max(sil_width) #Recommended number of clusters
 
+
 ##############
 aux <- distinct(data, ChurnReason)
 aux$ChurnID <- seq.int(nrow(aux))
@@ -93,6 +94,10 @@ scatterPlotFactor2 <- names(churns %>%select_if(is.factor) %>%
                               select(-contains("Churn")) %>% 
                               select(-contains("City")) %>% 
                               select(-contains("ZipCode")))
+
+
+dataNotNA <- data %>% filter(!is.na(ChurnReason))
+churnReasonCombo <- unique(dataNotNA$ChurnReason)
 
 # Define UI ---
 ui <- fluidPage(
@@ -143,7 +148,10 @@ ui <- fluidPage(
     ), #tabPanel Question 3
     
     tabPanel("Question 3",
-             h3("3- Where are the customers churning?", style = "color:blue"), 
+             h3("3- Where are the customers churning?", style = "color:blue"),
+             selectInput(inputId = 'selectedChurnReasonCombo', 'Select a categorical variable for color encoding',
+                         choices = churnReasonCombo),
+             checkboxInput("filterReaseonCombo", "Activate filter", FALSE),
              plotOutput("map")
     )#tabPanel Question 3
     
@@ -223,15 +231,36 @@ server <- function(input, output) {
     # Preprocessing
     california_fortified <- tidy(california, region = "NAME")
     
-    ciudades <- aggregate(Count ~ City, data, sum)
-    
-    california_fortified = california_fortified %>%
-      left_join(. , ciudades, by=c("id"="City"))
-    # Note that if the number of restaurant is NA, it is in fact 0
-    california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
-    ggplotMap(california_fortified)
-  })
-  
+
+        ggplot(aes(x = X, y = Y), data = tsne_data) +
+          geom_point(aes(color = cluster)) +
+          labs(title = "Resultados clustering PAM")
+      })
+      
+      output$pamTable <- renderTable({
+        dataPAM[pamFit()$medoids,]      
+      })  
+      
+      output$map <- renderPlot({
+        # Preprocessing
+        california_fortified <- tidy(california, region = "NAME")
+        
+        #filter
+        if(input$filterReaseonCombo){
+          dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
+        }
+        else{
+          dataFiltered <- data
+        }
+        
+        ciudades <- aggregate(Count ~ City, dataFiltered, sum)
+        
+        california_fortified = california_fortified %>%
+          left_join(. , ciudades, by=c("id"="City"))
+        # Note that if the number of restaurant is NA, it is in fact 0
+        california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
+        ggplotMap(california_fortified)
+      })
 }
 
 # Run the App ---
