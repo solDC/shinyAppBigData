@@ -134,7 +134,7 @@ ui <- fluidPage(
     ), #tabpanel Question 1
     
     tabPanel("Question 2",
-             h3("1- Are there any groups of customers that are churning?", style = "color:blue"), 
+             h3("2- Why are there customers who are moving? Do those who churn for the same reason have any characteristics in common??", style = "color:blue"), 
              sidebarPanel(
                selectInput(inputId = 'scatterPlot_color_encoding2', 'Select a categorical variable for color encoding',
                            choices = scatterPlotFactor2, selected = "Contract"),
