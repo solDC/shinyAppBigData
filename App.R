@@ -249,25 +249,25 @@ server <- function(input, output) {
   #####
   # Question 3
   #####
-      output$map <- renderPlot({
-        # Preprocessing
-        california_fortified <- tidy(california, region = "NAME")
-        
-        #filter
-        if(input$filterReaseonCombo){
-          dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
-        }
-        else{
-          dataFiltered <- data
-        }
-        ciudades <- aggregate(Count ~ County, dataFiltered, sum)
-        
-        california_fortified = california_fortified %>%
-          left_join(. , ciudades, by=c("id"="County"))
-        # Note that if the number of restaurant is NA, it is in fact 0
-        california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
-        ggplotMap(california_fortified)
-      })
+  output$map <- renderPlot({
+    # Preprocessing
+    california_fortified <- tidy(california, region = "NAME")
+    
+    #filter
+    if(input$filterReaseonCombo){
+      dataFiltered <- data %>% filter(ChurnReason==input$selectedChurnReasonCombo)
+    }
+    else{
+      dataFiltered <- data
+    }
+    ciudades <- aggregate(Count ~ County, dataFiltered, sum)
+    
+    california_fortified = california_fortified %>%
+      left_join(. , ciudades, by=c("id"="County"))
+    # Note that if the number of restaurant is NA, it is in fact 0
+    california_fortified$Count[ is.na(california_fortified$Count)] = 0.001
+    ggplotMap(california_fortified)
+  })
       
 }
 
