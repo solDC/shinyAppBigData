@@ -7,7 +7,7 @@
 ## Install or load package
 
 pkg = c("tidyverse","dplyr","ggplot2","readxl","maps", "mapproj", "shiny",
-        "cluster","Rtsne","rsconnect","geojsonio","broom","geojsonR","viridis")
+        "cluster","Rtsne","rsconnect","geojsonio","broom","geojsonR","viridis","zipcodeR")
 
 ## If not installed, install and load all packages
 package.check <- lapply(
