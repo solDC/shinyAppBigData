@@ -84,6 +84,8 @@ k <- which.max(sil_width) #Recommended number of clusters
 
 
 ##############
+# Prep question 2
+
 aux <- distinct(data, ChurnReason)
 aux$ChurnID <- seq.int(nrow(aux))
 aux <- aux[aux$ChurnID < 21, ]
@@ -101,6 +103,10 @@ barPlotFactor2 <- names(churns %>%select_if(is.factor) %>%
                               select(-contains("ZipCode")))
 dataNotNA <- data %>% filter(!is.na(ChurnReason))
 churnReasonCombo <- unique(dataNotNA$ChurnReason)
+
+##############
+# Prep question 3
+
 # Tenemos que obtener por cada zip code su county
 countyCalifornia <- california@data[["NAME"]]
 data$County <- ""
