@@ -172,10 +172,10 @@ ui <- fluidPage(
     
     tabPanel("Question 3",
              h3("3- Where are the customers churning?", style = "color:blue"),
-             selectInput(inputId = 'selectedChurnReasonCombo', 'Select a categorical variable for color encoding',
+             sidebarPanel(selectInput(inputId = 'selectedChurnReasonCombo', 'Select a churn reason for filtering',
                          choices = churnReasonCombo),
-             checkboxInput("filterReaseonCombo", "Activate filter", FALSE),
-             plotOutput("map",width = "100%",height = "600px")
+             checkboxInput("filterReaseonCombo", "Activate to apply filter", FALSE)),
+             mainPanel(plotOutput("map",width = "100%",height = "600px"))
     )#tabPanel Question 3
     
   ) #tabsetPanel
