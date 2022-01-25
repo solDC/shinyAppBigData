@@ -82,7 +82,7 @@ for(i in 2:8){
 }
 k <- which.max(sil_width) #Recommended number of clusters
 
-
+set.seed(123)
 ##############
 # Prep question 2
 
@@ -207,7 +207,7 @@ server <- function(input, output) {
     ggplot(data,aes_string(x=input$scatterPlot_x,y=input$scatterPlot_y,color=input$scatterPlot_color_encoding)) +
       geom_point() + #data=scatterPlotData()
       facet_wrap(~ ChurnLabel) +
-      ggtitle("Scatterplot faceting Churn variable")
+      ggtitle("Scatterplot faceting Churn variable to understand correlation in churn behaviour")
   })
   
   # PAM
@@ -232,7 +232,7 @@ server <- function(input, output) {
     
     ggplot(aes(x = X, y = Y), data = tsne_data) +
       geom_point(aes(color = cluster)) +
-      labs(title = "Resultados clustering PAM")
+      labs(title = "Cluster of customers who churned")
   })
   
   output$pamTable <- renderTable({
