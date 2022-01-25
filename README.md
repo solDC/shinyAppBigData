@@ -1,0 +1,1 @@
+For executing the shiny app open de file “App.R” from the root of the directory and execute all the comands or click the “Run app” in RStudio. The program will install automatically all the missing libraries.  
